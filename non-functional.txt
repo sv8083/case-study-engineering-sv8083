@@ -1,0 +1,25 @@
+Security
+    1. Pre-signed request url's rxpiry should be minimum (20s). Given that we are not sharing the access key and secret key with the client, the file upload becomes secure
+    2. AuthN and AuthZ can be implmented directly on API gateway
+    3. Rate-Limiting, can be applied on API Gateway, which would prevent DDos attacks.
+    4. API Gateway automatically supports HTTPS and TLS1.3 ensuring data encryption in transit.
+    5. We can add WAF to AWS region, to protect from some of the Owasp top10 attacks.
+
+Monitoring
+    1. Health Check Dashboard: Implement New-relic to check API's health status as well as external service
+    2. Observalibility: Implement APM (ELK stack) to monitor API latency and database latency using trace logs
+
+Resilience and Fault Tolerance
+    1. File upload fails to S3: Retry API call with retry number to /upload-request?retry=x. Log the retries
+    2. CSV processor downtime: Kafka message queues up. Implement a system of multiple consumer.
+    
+
+Scalability Plan
+    1. Assuming 10x increase in daily onboardings during a peak period of 10 hours
+        1.1. API calls ~ 20/min
+        1.2. Database ~ 100 MB/day ~ 3GB/month
+        1.3. Storage ~ 70 GB/day
+
+    2. File upload to S3: Since the files are directly uploaded to S3, and the storage is scalable we only need to handle the /upload-request
+
+    3. Database: Sharding applied to country_id, thereby decreasing latency. We can also Scale vertically (AWS RDS) in case load increases

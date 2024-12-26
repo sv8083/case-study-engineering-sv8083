@@ -1,3 +1,4 @@
+import io
 import boto3
 from botocore.client import Config
 from settings import settings
@@ -14,13 +15,11 @@ def get_s3_client(client = False):
         config=Config(signature_version="s3v4"),
     )
 
-def generate_s3_path(*args) -> str:
-    """Generate full URL from list of arguments, starting from base s3 URL
+def download_s3_fileobj(s3_file, s3_url):
+    _s3 = get_s3_client()
+    _s3.download_fileobj(settings.S3_BUCKET, s3_url, s3_file)
+    return s3_file
 
-    Returns:
-        (str): S3 URL
-    """
-    return settings.S3_UPLOAD_PATH.strip("/") + "".join(f"/{str(x)}" for x in args)
 
 def generate_s3_presigned_url(
     s3_path: str,

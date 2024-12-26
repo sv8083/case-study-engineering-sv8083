@@ -1,9 +1,10 @@
+import io
 from kafka import KafkaConsumer
 import boto3
 import csv
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-
+from datetime import datetime
+from models import create_engine, sessionmaker, get_session, Prices
+from utils import download_s3_fileobj
 # Kafka setup
 consumer = KafkaConsumer(
     'pricing-topic',
@@ -16,14 +17,10 @@ consumer = KafkaConsumer(
 # S3 setup
 s3_client = boto3.client('s3')
 
-# Database setup
-DATABASE_URL = "sqlite:///pricing.db"
-engine = create_engine(DATABASE_URL)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 def process_csv_to_db(file_path, country_id):
-    session = SessionLocal()
-    with open(file_path, 'r') as csvfile:
+    session = get_session(country_id)
+    with open(file_path, 'ro') as csvfile:
         reader = csv.DictReader(csvfile)
         for row in reader:
             price_record = {
@@ -41,14 +38,14 @@ def process_csv_to_db(file_path, country_id):
 
 for message in consumer:
     msg = eval(message.value.decode('utf-8'))
-    upload_id = msg["upload_id"]
-    country_id = msg["country_id"]
+    upload_id = msg["payload"]["upload_id"]
+    country_id = msg["payload"]["country_id"]
     session = get_session(country_id)
     file_name = f"{upload_id}.csv"
     file_path = f"/tmp/{file_name}"
-
     # Download file from S3
-    s3_client.download_file('pricing-feeds', file_name, file_path)
-    
+    _file = io.BytesIO()
+    download_s3_fileobj(_file, f"/{upload_id}/file.csv")
+    _file.seek(0)
     # Process and insert into database
-    process_csv_to_db(file_path, country_id)
+    process_csv_to_db(_file, country_id)

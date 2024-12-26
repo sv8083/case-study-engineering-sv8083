@@ -5,15 +5,20 @@ from models import Prices, get_session
 from pydantic import BaseModel
 from typing import Optional, List
 
-from settings import settings
+from settings import settings, app_logger
 import redis
 import uuid
 
 from datetime import date, datetime
+from kafka import KafkaProducer
+from kafka.errors import NoBrokersAvailable
 
 # FastAPI app
 app = FastAPI()
-
+try:
+    producer = KafkaProducer(bootstrap_servers=['localhost:9092'])
+except NoBrokersAvailable:
+    app_logger.critical("Workers not available")
 
 # Redis setup for tracking uploads
 redis_client = redis.from_url(settings.REDIS_URL, decode_responses=True)
@@ -55,6 +60,7 @@ def confirm_upload(upload_id: str = Query(...)):
         }
     if country_id:
         redis_client.delete(upload_id)
+        producer.send('pricing-topic', value=str(message).encode('utf-8'))
         return {"message": "Upload confirmed"}
     else:
         raise HTTPException(status_code=404, detail="Invalid or expired upload_id")
@@ -90,7 +96,7 @@ def get_pricing_feeds(
 def get_price_detail(price_id: int, country_id: str = Query('IN')):
     session = get_session(country_id)
     try:
-        query = select(Prices).filter(Prices.id == price_id)
+        query = session.query(Prices).filter(Prices.id == price_id)
         result = session.execute(query).scalar_one_or_none()
         if not result:
             raise HTTPException(status_code=404, detail="Price record not found")
@@ -103,11 +109,11 @@ def get_price_detail(price_id: int, country_id: str = Query('IN')):
 def update_pricing(price_id: int, payload: PricingUpdate, country_id: str = Query('IN')):
     session = get_session(country_id)
     try:
-        query = update(Prices).where(Prices.id == price_id).values(**payload.dict(exclude_unset=True))
+        query = session.query(Prices).where(Prices.id == price_id).update(**payload.dict(exclude_unset=True))
         session.execute(query)
         session.commit()
         return {"message": "Record updated successfully"}
-    except NoResultFound:
+    except Exception:
         raise HTTPException(status_code=404, detail="Price record not found")
     finally:
         session.close()
