@@ -1,0 +1,16 @@
+1 Technology Stack
+    Front-end: React. This can be built as a single page application with login view and file upload view, along with query view. It will result in lightweight application
+
+    Back-end: FastAPI. It supports asyncio inherently thereby improving I/O ops. Can be scaled easily.
+    
+    Message Broker: Kafka, since its a log based broker, and ensures delivery of message at least once.
+    
+    Database: PostgreSQL, since its easily scalability
+
+    Infrastructure: AWS ECS for API (100% uptime). S3 for hosting SPA. MSK for managed kafka. RDS for Postgres. S3 for storing CSV's
+    
+    Monitoring: Use AWS CloudWatch for server monitoring. New-Relic or  `statping` (Open-source) for monitoring application.
+
+2 Architectural Style
+    For simplicity, a monolithic application is easier to maintain initially. Both consumer and API backend can have access to database direclty.
+    REST is simpler to start with. Later on, GraphQL might be beneficial if the client requires flexible queries.

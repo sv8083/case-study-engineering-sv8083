@@ -1,0 +1,9 @@
+Data Volume:
+
+1. Each store updates pricing records periodically. Considering 3000 stores, the database should handle millions of records efficiently. PostgreSQL can manage this volume well with proper indexing and query optimization.
+
+2. Authentication is required for accessing the system, using JWT (JSON Web Token) for session management. All endpoints will be secured.
+
+3. Backend deployed using containerization (e.g., Docker) for easy scaling.
+
+4. Regular backups and failover is setup for PostgreSQL.
